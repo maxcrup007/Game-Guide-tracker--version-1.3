@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Games Guide</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+  :root {
+    --bg:       #f4f3ef;
+    --surface:  #ffffff;
+    --surface2: #f0eeea;
+    --border:   rgba(0,0,0,0.10);
+    --border2:  rgba(0,0,0,0.18);
+    --text:     #1a1a18;
+    --muted:    #6b6b66;
+    --hint:     #9e9e98;
+    --accent:   #1a1a18;
+    --accent-fg:#ffffff;
+    --radius-md:8px;
+    --radius-lg:12px;
+    --danger:   #c0392b;
+  }
+ 
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+ 
+  /* ── Layout ── */
+  .app   { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+  .topbar { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px; }
+  .app-title { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+  .app-sub   { font-size: 13px; color: var(--muted); margin-top: 3px; }
+ 
+  /* ── Stats ── */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .stat  { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; }
+  .stat-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .stat-val   { font-size: 24px; font-weight: 600; }
+ 
+  /* ── Filters ── */
+  .filters { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .filters input, .filters select {
+    padding: 8px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius-md);
+    background: var(--surface); color: var(--text); font-size: 13px; outline: none;
+  }
+  .filters input  { flex: 1; min-width: 180px; }
+  .filters input:focus, .filters select:focus { border-color: var(--text); }
+ 
+  /* ── Grid ── */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; }
+  .empty { text-align: center; padding: 4rem 1rem; color: var(--muted); font-size: 14px; }
+ 
+  /* ── Card ── */
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; position: relative; transition: box-shadow .15s; }
+  .card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+ 
+  .card-fav { position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 18px; cursor: pointer; line-height: 1; opacity: 0.35; transition: opacity .15s; }
+  .card-fav.on  { opacity: 1; }
+  .card-fav:hover { opacity: 0.8; }
+ 
+  .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; margin-bottom: 10px; letter-spacing: 0.3px; }
+  .badge-MineCraft              { background:#E6F1FB; color:#16a104; }
+  .badge-Monster-Hunter-Wild    { background:#EAF3DE; color:#999b25; }
+  .badge-ARK-Survival-Ascended  { background:#FAEEDA; color:#060ae2; }
+  .badge-Red-Dead-Redemption-2  { background:#EEEDFE; color:#eb0c0c; }
+  .badge-ELDEN-RING             { background:#EEEDFE; color:#dda52c; }
+  .badge-FateGO                 { background:#EEEDFE; color:#2064a3; }
+ 
+  .card-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; padding-right: 24px; }
+  .card-date  { font-size: 11px; color: var(--hint); }
+  .card-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 0.5px solid var(--border); }
+  .card-actions button { font-size: 12px; padding: 5px 12px; border-radius: var(--radius-md); border: 0.5px solid var(--border2); background: none; color: var(--muted); cursor: pointer; transition: background .12s; }
+  .card-actions button:hover { background: var(--surface2); }
+  .card-actions .btn-del { color: var(--danger); border-color: rgba(192,57,43,0.3); }
+  .card-actions .btn-del:hover { background: #fdf0ee; }
+ 
+  /* ── Buttons ── */
+  .btn-primary { background: var(--accent); color: var(--accent-fg); border: none; border-radius: var(--radius-md); padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+  .btn-primary:hover { opacity: 0.85; }
+
+  .btn-upload-card {
+  font-size: 12px; padding: 5px 12px; border-radius: var(--radius-md);
+  border: 0.5px solid var(--border2); background: none; color: var(--muted);
+  cursor: pointer; transition: background .12s;
+  }
+
+  .btn-upload-card:hover { background: var(--surface2); }
+ 
+  /* ── Modal overlay ── */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 1rem; }
+  .modal   { background: var(--surface); border-radius: var(--radius-lg); padding: 1.75rem; width: 400px; max-width: 100%; }
+  .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 1.25rem; }
+ 
+  .field        { margin-bottom: 14px; }
+  .field label  { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 9px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius-md);
+    background: var(--surface); color: var(--text); font-size: 13px; font-family: inherit; outline: none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--text); }
+  .field textarea { resize: vertical; min-height: 80px; }
+ 
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; }
+  .btn-cancel { background: none; border: 0.5px solid var(--border2); color: var(--muted); border-radius: var(--radius-md); padding: 8px 16px; font-size: 13px; cursor: pointer; }
+  .btn-cancel:hover { background: var(--surface2); }
+ 
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; padding: 10px 20px; border-radius: 99px; font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 300; }
+  .toast.show { opacity: 1; }
+ 
+  /* ── Note preview truncate ── */
+  .card-notes { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 6px;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .btn-more { background: none; border: none; font-size: 12px; color: var(--accent); cursor: pointer; padding: 0; margin-bottom: 10px; text-decoration: underline; opacity: 0.7; }
+  .btn-more:hover { opacity: 1; }
+ 
+  /* ── Detail modal ── */
+  .detail-modal { background: var(--surface); border-radius: var(--radius-lg); padding: 1.75rem; width: 680px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; }
+  .detail-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1rem; gap: 12px; }
+  .detail-header h2 { font-size: 18px; font-weight: 600; }
+  .detail-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--muted); line-height: 1; padding: 0 4px; }
+  .detail-meta { display: flex; gap: 10px; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+  .detail-actions { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .detail-actions a, .detail-actions button, .detail-actions label {
+    font-size: 12px; padding: 6px 14px; border-radius: var(--radius-md);
+    border: 0.5px solid var(--border2); background: none; color: var(--muted);
+    cursor: pointer; text-decoration: none; display: inline-block; transition: background .12s;
+  }
+  .detail-actions a:hover, .detail-actions button:hover, .detail-actions label:hover { background: var(--surface2); }
+  .detail-actions .btn-stackedit { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 500; }
+  .detail-actions .btn-stackedit:hover { opacity: 0.85; }
+  .md-preview { flex: 1; overflow-y: auto; border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem; background: var(--bg); font-size: 14px; line-height: 1.8; }
+  .md-preview h1,.md-preview h2,.md-preview h3 { font-weight: 600; margin: 1rem 0 0.4rem; }
+  .md-preview h1 { font-size: 20px; } .md-preview h2 { font-size: 17px; } .md-preview h3 { font-size: 15px; }
+  .md-preview p { margin-bottom: 0.75rem; }
+  .md-preview ul,.md-preview ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+  .md-preview li { margin-bottom: 0.25rem; }
+  .md-preview code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
+  .md-preview pre { background: var(--surface2); padding: 1rem; border-radius: var(--radius-md); overflow-x: auto; margin-bottom: 0.75rem; }
+  .md-preview pre code { background: none; padding: 0; }
+  .md-preview blockquote { border-left: 3px solid var(--border2); padding-left: 1rem; color: var(--muted); margin-bottom: 0.75rem; }
+  .md-preview strong { font-weight: 600; }
+  .md-preview em { font-style: italic; }
+  .md-preview hr { border: none; border-top: 0.5px solid var(--border2); margin: 1rem 0; }
+  .md-preview a { color: var(--accent); }
+  .md-preview table { border-collapse: collapse; width: 100%; margin-bottom: 0.75rem; }
+  .md-preview th, .md-preview td { border: 0.5px solid var(--border2); padding: 6px 10px; font-size: 13px; }
+  .md-preview th { background: var(--surface2); font-weight: 600; }
+ 
+  /* upload hidden input */
+  #md-upload { display: none; }
+</style>
+</head>
+<body>
+ 
+<div class="app">
+  <div class="topbar">
+    <div>
+      <div class="app-title">My Games Guide</div>
+      <div class="app-sub">Track everything you love</div>
+    </div>
+    <button class="btn-primary" onclick="openModal()">+ Add item</button>
+  </div>
+ 
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Total items</div><div class="stat-val" id="st-total">—</div></div>
+    <div class="stat"><div class="stat-label">Categories</div><div class="stat-val" id="st-cats">—</div></div>
+    <div class="stat"><div class="stat-label">Favorites</div><div class="stat-val" id="st-favs">—</div></div>
+  </div>
+ 
+  <div class="filters">
+    <input type="text" id="search" placeholder="Search title or notes…" oninput="load()">
+    <select id="fcat" onchange="load()">
+      <option value="">All categories</option>
+      <option>MineCraft</option>
+      <option>Monster Hunter Wild</option>
+      <option>ARK Survival Ascended</option>
+      <option>Red Dead Redemption 2</option>
+      <option>ELDEN RING</option>
+      <option>FateGO</option>
+    </select>
+    <select id="fsort" onchange="load()">
+      <option value="new">Newest first</option>
+      <option value="old">Oldest first</option>
+      <option value="az">A → Z</option>
+    </select>
+    <select id="ffav" onchange="load()">
+      <option value="">All</option>
+      <option value="true">Favorites only</option>
+    </select>
+  </div>
+ 
+  <div class="grid" id="grid"></div>
+</div>
+ 
+<!-- Modal -->
+<div class="overlay" id="overlay" style="display:none">
+  <div class="modal">
+    <h2 id="modal-title">Add new item</h2>
+    <div class="field"><label>Title *</label><input id="f-title" placeholder="e.g. Chess, Guitar, Cycling"></div>
+    <div class="field"><label>Category</label>
+      <select id="f-cat">
+        <option>MineCraft</option>
+        <option>Monster Hunter Wild</option>
+        <option>ARK Survival Ascended</option>
+        <option>Red Dead Redemption 2</option>
+        <option>ELDEN RING</option>
+        <option>FateGO</option>
+      </select>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f-notes" placeholder="Why you love it, goals, tips…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+ 
+<!-- Detail modal -->
+<div class="overlay" id="detail-overlay" style="display:none">
+  <div class="detail-modal">
+    <div class="detail-header">
+      <h2 id="detail-title">—</h2>
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="detail-meta">
+      <span class="badge" id="detail-badge"></span>
+      <span style="font-size:12px;color:var(--muted)" id="detail-date"></span>
+    </div>
+    <div class="detail-actions">
+      <a id="btn-stackedit" class="btn-stackedit" target="_blank" href="#">Open in StackEdit ↗</a>
+      <label for="md-upload" title="Upload a .md file to replace notes">Upload .md file</label>
+      <input type="file" id="md-upload" accept=".md,.markdown,text/markdown" onchange="uploadMd(event)">
+      <button onclick="copyMd()">Copy markdown</button>
+      <button onclick="downloadMd()">Download .md</button>
+    </div>
+    <div class="md-preview" id="md-preview"></div>
+  </div>
+</div>
+ 
+<div class="toast" id="toast"></div>
+ 
+<script>
+const API = '/api/items';
+let editingId = null;
+ 
+async function load() {
+  const search = document.getElementById('search').value;
+  const category = document.getElementById('fcat').value;
+  const sort = document.getElementById('fsort').value;
+  const favorite = document.getElementById('ffav').value;
+ 
+  const params = new URLSearchParams({ search, category, sort, favorite });
+  const res = await fetch(`${API}?${params}`);
+  const items = await res.json();
+ 
+  renderGrid(items);
+  renderStats(items);
+}
+ 
+function renderGrid(items) {
+  const g = document.getElementById('grid');
+  if (!items.length) { g.innerHTML = '<div class="empty">No items found. Try adjusting your filters or add something new!</div>'; return; }
+  g.innerHTML = items.map(x => `
+    <div class="card" id="card-${x.id}">
+      <button class="card-fav ${x.favorite ? 'on' : ''}" onclick="toggleFav(${x.id}, ${x.favorite})" title="Favorite">${x.favorite ? '★' : '☆'}</button>
+      <span class="badge badge-${slugify(x.category)}">${esc(x.category)}</span>
+      <div class="card-title">${esc(x.title)}</div>
+      <div class="card-notes">${esc(x.notes) || '<em style="opacity:.5">No notes yet.</em>'}</div>
+      ${x.notes ? `<button class="btn-more" onclick="openDetail(${x.id})">More detail ↓</button>` : ''}
+      <div class="card-date">Added ${fmt(x.created_at)}</div>
+      <div class="card-actions">
+        <button onclick="editItem(${x.id})">Edit</button>
+        <label class="btn-upload-card" for="card-upload-${x.id}" title="Upload .md file">Upload .md</label>
+        <input type="file" id="card-upload-${x.id}" accept=".md,.markdown" style="display:none" onchange="cardUploadMd(event,${x.id})">
+        <button class="btn-del" onclick="deleteItem(${x.id})">Delete</button>
+      </div>
+    </div>`).join('');
+}
+ 
+function renderStats(items) {
+  // fetch ALL items for accurate stats (unfiltered)
+  fetch(API).then(r => r.json()).then(all => {
+    document.getElementById('st-total').textContent = all.length;
+    document.getElementById('st-cats').textContent = new Set(all.map(x => x.category)).size;
+    document.getElementById('st-favs').textContent = all.filter(x => x.favorite).length;
+  });
+}
+ 
+function slugify(cat) { return cat.replace(/\s+/g, '-'); }
+function fmt(d) { return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+ 
+function editItem(id) { openModal(id); }
+ 
+function openModal(id = null) {
+  editingId = id;
+  document.getElementById('modal-title').textContent = id ? 'Edit item' : 'Add new item';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-cat').value = 'MineCraft';
+  document.getElementById('f-notes').value = '';
+ 
+  if (id) {
+    fetch(`${API}/${id}`).then(r => r.json()).then(x => {
+      document.getElementById('f-title').value = x.title;
+      document.getElementById('f-cat').value = x.category;
+      document.getElementById('f-notes').value = x.notes;
+    });
+  }
+  document.getElementById('overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('f-title').focus(), 50);
+}
+ 
+function closeModal() {
+  document.getElementById('overlay').style.display = 'none';
+  editingId = null;
+}
+ 
+async function saveItem() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { alert('Title is required.'); return; }
+ 
+  const payload = {
+    title,
+    category: document.getElementById('f-cat').value,
+    notes: document.getElementById('f-notes').value
+  };
+ 
+  if (editingId) {
+    await fetch(`${API}/${editingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    toast('Item updated!');
+  } else {
+    await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    toast('Item added!');
+  }
+  closeModal();
+  load();
+}
+ 
+async function deleteItem(id) {
+  if (!confirm('Delete this item?')) return;
+  await fetch(`${API}/${id}`, { method: 'DELETE' });
+  toast('Item deleted.');
+  load();
+}
+ 
+async function toggleFav(id, current) {
+  await fetch(`${API}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ favorite: !current })
+  });
+  load();
+}
+ 
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+ 
+// ── Detail modal ─────────────────────────────────────────────────────────────
+ 
+let detailItem = null;
+ 
+function openDetail(id) {
+  fetch(`${API}/${id}`).then(r => r.json()).then(x => {
+    detailItem = x;
+    document.getElementById('detail-title').textContent = x.title;
+    document.getElementById('detail-date').textContent = 'Added ' + fmt(x.created_at);
+    const badge = document.getElementById('detail-badge');
+    badge.textContent = x.category;
+    badge.className = 'badge badge-' + slugify(x.category);
+    renderMarkdown(x.notes || '');
+    // StackEdit link: encode content as base64 and pass via URL
+    const md = x.notes || '';
+    const stackUrl = 'https://stackedit.io/app#' + btoa(unescape(encodeURIComponent(
+      '# ' + x.title + '\n\n' + md
+    )));
+    document.getElementById('btn-stackedit').href = stackUrl;
+    document.getElementById('detail-overlay').style.display = 'flex';
+  });
+}
+ 
+function closeDetail() {
+  document.getElementById('detail-overlay').style.display = 'none';
+  detailItem = null;
+}
+
+function cardUploadMd(event, id) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const content = e.target.result;
+    fetch(`${API}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: content })
+    }).then(() => {
+      toast('Markdown uploaded & saved!');
+      load();
+    });
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+ 
+// Simple markdown → HTML renderer (no external lib needed)
+function renderMarkdown(md) {
+  let html = md
+    // headings
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // hr
+    .replace(/^---$/gm, '<hr>')
+    // bold + italic
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // inline code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // blockquote
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    // unordered list
+    .replace(/^\s*[-*] (.+)$/gm, '<li>$1</li>')
+    // ordered list
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    // links
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>')
+    // line breaks → paragraphs
+    .split(/\n{2,}/).map(block => {
+      if (/^<(h[1-3]|hr|blockquote|li|ul|ol)/.test(block.trim())) return block;
+      if (block.trim() === '') return '';
+      if (block.includes('<li>')) return '<ul>' + block + '</ul>';
+      return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
+    }).join('\n');
+  document.getElementById('md-preview').innerHTML = html || '<em style="opacity:.5">No notes yet. Edit this item to add markdown content.</em>';
+}
+ 
+function uploadMd(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const content = e.target.result;
+    // Put content into the notes textarea in edit modal and save
+    if (detailItem) {
+      fetch(`${API}/${detailItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: content })
+      }).then(() => {
+        detailItem.notes = content;
+        renderMarkdown(content);
+        const stackUrl = 'https://stackedit.io/app#' + btoa(unescape(encodeURIComponent(
+          '# ' + detailItem.title + '\n\n' + content
+        )));
+        document.getElementById('btn-stackedit').href = stackUrl;
+        toast('Markdown file uploaded & saved!');
+        load();
+      });
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+ 
+function copyMd() {
+  if (!detailItem) return;
+  navigator.clipboard.writeText(detailItem.notes || '').then(() => toast('Copied to clipboard!'));
+}
+ 
+function downloadMd() {
+  if (!detailItem) return;
+  const blob = new Blob([detailItem.notes || ''], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = detailItem.title.replace(/\s+/g, '_') + '.md';
+  a.click();
+}
+ 
+// close overlay on background click
+document.getElementById('overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+document.getElementById('detail-overlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeDetail(); });
+ 
+load();
+</script>
+</body>
+</html>
