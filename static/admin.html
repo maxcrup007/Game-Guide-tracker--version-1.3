@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f3ef; --surface: #ffffff; --surface2: #f0eeea;
+    --border: rgba(0,0,0,0.10); --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18; --muted: #6b6b66; --hint: #9e9e98;
+    --accent: #1a1a18; --accent-fg: #ffffff;
+    --danger: #c0392b; --radius-md: 8px; --radius-lg: 12px;
+  }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── Sidebar ── */
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: var(--surface); border-right: 0.5px solid var(--border); padding: 1.5rem 0; display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; left: 0; }
+  .sidebar-logo { padding: 0 1.25rem 1.5rem; border-bottom: 0.5px solid var(--border); margin-bottom: 1rem; }
+  .sidebar-logo h1 { font-size: 15px; font-weight: 600; }
+  .sidebar-logo p  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .sidebar-user { padding: 0 1.25rem; margin-bottom: 1.5rem; font-size: 12px; color: var(--muted); }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 1.25rem; font-size: 13px; cursor: pointer; color: var(--muted); border-left: 2px solid transparent; transition: all .12s; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { color: var(--text); border-left-color: var(--text); background: var(--surface2); font-weight: 500; }
+  .nav-icon { font-size: 15px; width: 20px; text-align: center; }
+  .sidebar-bottom { margin-top: auto; padding: 1rem 1.25rem; border-top: 0.5px solid var(--border); }
+  .btn-logout { width: 100%; padding: 8px; border: 0.5px solid var(--border2); border-radius: var(--radius-md); background: none; color: var(--muted); font-size: 12px; cursor: pointer; }
+  .btn-logout:hover { background: var(--surface2); }
+
+  /* ── Main content ── */
+  .main { margin-left: 220px; padding: 2rem; flex: 1; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-title { font-size: 20px; font-weight: 600; margin-bottom: 0.4rem; }
+  .page-sub   { font-size: 13px; color: var(--muted); margin-bottom: 1.5rem; }
+
+  /* ── Section card ── */
+  .section { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .section-title { font-size: 14px; font-weight: 600; }
+
+  /* ── Add form row ── */
+  .add-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .add-row input, .add-row select { padding: 7px 11px; border: 0.5px solid var(--border2); border-radius: var(--radius-md); background: var(--surface); color: var(--text); font-size: 13px; outline: none; }
+  .add-row input:focus { border-color: var(--text); }
+  .add-row input.inp-name { flex: 1; min-width: 160px; }
+  .color-pair { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+  .color-pair input[type=color] { width: 36px; height: 30px; border: 0.5px solid var(--border2); border-radius: var(--radius-md); padding: 2px; cursor: pointer; }
+
+  /* ── Buttons ── */
+  .btn-primary { background: var(--accent); color: var(--accent-fg); border: none; border-radius: var(--radius-md); padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-sm { font-size: 12px; padding: 4px 10px; border-radius: var(--radius-md); border: 0.5px solid var(--border2); background: none; color: var(--muted); cursor: pointer; }
+  .btn-sm:hover { background: var(--surface2); }
+  .btn-del { color: var(--danger); border-color: rgba(192,57,43,0.3); }
+  .btn-del:hover { background: #fdf0ee !important; }
+
+  /* ── Tag chips ── */
+  .chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 0.5px solid var(--border2); background: var(--surface2); }
+  .chip button { background: none; border: none; cursor: pointer; font-size: 14px; color: var(--muted); line-height: 1; padding: 0; }
+  .chip button:hover { color: var(--danger); }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; color: var(--muted); font-weight: 500; padding: 0 10px 8px; border-bottom: 0.5px solid var(--border); }
+  td { padding: 10px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+
+  /* ── Badge preview ── */
+  .badge-prev { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+
+  /* ── Announcement ── */
+  .ann-body { font-size: 12px; color: var(--muted); margin-top: 4px; white-space: pre-wrap; }
+  .ann-active { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+  .ann-on  { background: #E1F5EE; color: #085041; }
+  .ann-off { background: var(--surface2); color: var(--muted); }
+
+  /* ── Stats ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .stat-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; }
+  .stat-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .stat-val   { font-size: 24px; font-weight: 600; }
+
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; padding: 10px 20px; border-radius: 99px; font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; }
+
+  /* ── Textarea ── */
+  textarea { width: 100%; padding: 8px 11px; border: 0.5px solid var(--border2); border-radius: var(--radius-md); background: var(--surface); color: var(--text); font-size: 13px; font-family: inherit; outline: none; resize: vertical; min-height: 70px; }
+  textarea:focus { border-color: var(--text); }
+
+  .back-link { font-size: 12px; color: var(--muted); margin-bottom: 1.5rem; display: inline-block; }
+  .req-status { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 20px; }
+  .req-status-pending  { background:#FAEEDA; color:#633806; }
+  .req-status-approved { background:#EAF3DE; color:#27500A; }
+  .req-status-rejected { background:#FCEBEB; color:#791F1F; }
+  .req-status-done     { background:#E6F1FB; color:#0C447C; }
+  .req-card-admin { background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius-lg); padding:1.25rem 1.5rem; margin-bottom:10px; }
+  .req-filter.active { background: var(--surface2); color: var(--text); font-weight: 500; }
+  .back-link:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>🎮 Admin Panel</h1>
+      <p>Games & Hobbies Tracker</p>
+    </div>
+    <div class="sidebar-user" id="sidebar-user">Logged in as —</div>
+    <nav>
+      <div class="nav-item active" onclick="showPage('dashboard')" data-page="dashboard"><span class="nav-icon">📊</span> Dashboard</div>
+      <div class="nav-item" onclick="showPage('categories')" data-page="categories"><span class="nav-icon">🏷️</span> Categories</div>
+      <div class="nav-item" onclick="showPage('tags')" data-page="tags"><span class="nav-icon">🔖</span> Tags</div>
+      <div class="nav-item" onclick="showPage('platforms')" data-page="platforms"><span class="nav-icon">🖥️</span> Platforms</div>
+      <div class="nav-item" onclick="showPage('statuses')" data-page="statuses"><span class="nav-icon">📌</span> Statuses</div>
+      <div class="nav-item" onclick="showPage('announcements')" data-page="announcements"><span class="nav-icon">📢</span> Announcements</div>
+      <div class="nav-item" onclick="showPage('requests')" data-page="requests"><span class="nav-icon">📋</span> Requests</div>
+      <div class="nav-item" onclick="showPage('superusers')" data-page="superusers"><span class="nav-icon">👤</span> Superusers</div>
+    </nav>
+    <div class="sidebar-bottom">
+      <a href="/" style="display:block;font-size:12px;color:var(--muted);text-decoration:none;margin-bottom:8px;">← Back to app</a>
+      <button class="btn-logout" onclick="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">Overview of your tracker data</div>
+      <div class="stat-grid" id="dash-stats"></div>
+      <div class="section">
+        <div class="section-title" style="margin-bottom:10px">Recent items</div>
+        <table><thead><tr><th>Title</th><th>Category</th><th>Added</th></tr></thead>
+        <tbody id="dash-items"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="page" id="page-categories">
+      <div class="page-title">Categories</div>
+      <div class="page-sub">Manage game/hobby categories shown in the dropdown</div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">Add category</div></div>
+        <div class="add-row">
+          <input class="inp-name" id="cat-name" placeholder="Category name e.g. Stardew Valley">
+          <div class="color-pair">
+            <span>Background</span><input type="color" id="cat-bg" value="#E6F1FB">
+          </div>
+          <div class="color-pair">
+            <span>Text</span><input type="color" id="cat-text" value="#0C447C">
+          </div>
+          <button class="btn-primary" onclick="addCategory()">Add</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title" style="margin-bottom:10px">All categories</div>
+        <table><thead><tr><th>Name</th><th>Preview</th><th>Action</th></tr></thead>
+        <tbody id="cat-list"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Tags -->
+    <div class="page" id="page-tags">
+      <div class="page-title">Tags</div>
+      <div class="page-sub">Manage tags like RPG, Action, Multiplayer</div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">Add tag</div></div>
+        <div class="add-row">
+          <input class="inp-name" id="tag-name" placeholder="Tag name e.g. Souls-like">
+          <button class="btn-primary" onclick="addTag()">Add</button>
+        </div>
+        <div class="chip-list" id="tag-list"></div>
+      </div>
+    </div>
+
+    <!-- Platforms -->
+    <div class="page" id="page-platforms">
+      <div class="page-title">Platforms</div>
+      <div class="page-sub">Manage platforms like PC, PS5, Mobile</div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">Add platform</div></div>
+        <div class="add-row">
+          <input class="inp-name" id="plat-name" placeholder="Platform name e.g. Steam Deck">
+          <button class="btn-primary" onclick="addPlatform()">Add</button>
+        </div>
+        <div class="chip-list" id="plat-list"></div>
+      </div>
+    </div>
+
+    <!-- Statuses -->
+    <div class="page" id="page-statuses">
+      <div class="page-title">Statuses</div>
+      <div class="page-sub">Manage play statuses like Playing, Completed, Dropped</div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">Add status</div></div>
+        <div class="add-row">
+          <input class="inp-name" id="stat-name" placeholder="Status name e.g. Paused">
+          <div class="color-pair">
+            <span>Background</span><input type="color" id="stat-bg" value="#E1F5EE">
+          </div>
+          <div class="color-pair">
+            <span>Text</span><input type="color" id="stat-text" value="#085041">
+          </div>
+          <button class="btn-primary" onclick="addStatus()">Add</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title" style="margin-bottom:10px">All statuses</div>
+        <table><thead><tr><th>Name</th><th>Preview</th><th>Action</th></tr></thead>
+        <tbody id="stat-list"></tbody></table>
+      </div>
+    </div>
+
+    <!-- Announcements -->
+    <div class="page" id="page-announcements">
+      <div class="page-title">Announcements</div>
+      <div class="page-sub">Notices shown to all users on the main page</div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">New announcement</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input id="ann-title" placeholder="Title e.g. Server maintenance tonight" style="padding:8px 11px;border:0.5px solid var(--border2);border-radius:var(--radius-md);font-size:13px;font-family:inherit;outline:none;color:var(--text);background:var(--surface);">
+          <textarea id="ann-body" placeholder="Body (optional, supports plain text)"></textarea>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;">
+              <input type="checkbox" id="ann-active" checked> Active (visible to users)
+            </label>
+            <button class="btn-primary" onclick="addAnnouncement()">Post</button>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title" style="margin-bottom:10px">All announcements</div>
+        <div id="ann-list"></div>
+      </div>
+    </div>
+
+    <!-- Superusers -->
+    <div class="page" id="page-superusers">
+      <div class="page-title">Superusers</div>
+      <div class="page-sub">Manage admin accounts — only superusers can access this panel</div>
+      <div class="section">
+        <div class="section-header"><div class="section-title">Add superuser</div></div>
+        <div class="add-row">
+          <input class="inp-name" id="su-username" placeholder="Username">
+          <input type="password" id="su-password" placeholder="Password" style="flex:1;min-width:140px;">
+          <button class="btn-primary" onclick="addSuperuser()">Add</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title" style="margin-bottom:10px">All superusers</div>
+        <table><thead><tr><th>Username</th><th>Created</th><th>Action</th></tr></thead>
+        <tbody id="su-list"></tbody></table>
+      </div>
+    </div>
+
+
+    <!-- Requests -->
+    <div class="page" id="page-requests">
+      <div class="page-title">Game Research Requests</div>
+      <div class="page-sub">Review and manage requests submitted by users</div>
+      <div class="section" style="margin-bottom:1rem">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:13px;color:var(--muted)">Filter:</span>
+          <button class="btn-sm req-filter active" onclick="filterRequests('')">All</button>
+          <button class="btn-sm req-filter" onclick="filterRequests('pending')">Pending</button>
+          <button class="btn-sm req-filter" onclick="filterRequests('approved')">Approved</button>
+          <button class="btn-sm req-filter" onclick="filterRequests('done')">Done</button>
+          <button class="btn-sm req-filter" onclick="filterRequests('rejected')">Rejected</button>
+        </div>
+      </div>
+      <div id="req-admin-list"></div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelector(`[data-page="${name}"]`).classList.add('active');
+  loaders[name] && loaders[name]();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── API helpers ───────────────────────────────────────────────────────────────
+async function api(method, url, body) {
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  return res;
+}
+
+function fmt(d) { return d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'; }
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function logout() {
+  await api('POST', '/admin/logout');
+  window.location.href = '/admin/login';
+}
+
+async function loadMe() {
+  const res = await fetch('/api/admin/me');
+  if (!res.ok) { window.location.href = '/admin/login'; return; }
+  const data = await res.json();
+  document.getElementById('sidebar-user').textContent = 'Logged in as ' + data.username;
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  const [items, cats, tags, plats, stats, anns] = await Promise.all([
+    fetch('/api/items').then(r => r.json()),
+    fetch('/api/categories').then(r => r.json()),
+    fetch('/api/tags').then(r => r.json()),
+    fetch('/api/platforms').then(r => r.json()),
+    fetch('/api/statuses').then(r => r.json()),
+    fetch('/api/admin/announcements').then(r => r.json()),
+  ]);
+  document.getElementById('dash-stats').innerHTML = [
+    ['Items', items.length],
+    ['Categories', cats.length],
+    ['Tags', tags.length],
+    ['Platforms', plats.length],
+    ['Statuses', stats.length],
+    ['Announcements', anns.length],
+  ].map(([l, v]) => `<div class="stat-card"><div class="stat-label">${l}</div><div class="stat-val">${v}</div></div>`).join('');
+
+  const recent = [...items].sort((a,b) => b.id - a.id).slice(0, 8);
+  document.getElementById('dash-items').innerHTML = recent.map(x =>
+    `<tr><td>${esc(x.title)}</td><td>${esc(x.category)}</td><td>${fmt(x.created_at)}</td></tr>`
+  ).join('') || '<tr><td colspan="3" style="color:var(--muted);text-align:center;padding:1rem">No items yet</td></tr>';
+}
+
+// ── Categories ────────────────────────────────────────────────────────────────
+async function loadCategories() {
+  const cats = await fetch('/api/categories').then(r => r.json());
+  document.getElementById('cat-list').innerHTML = cats.map(c => `
+    <tr>
+      <td>${esc(c.name)}</td>
+      <td><span class="badge-prev" style="background:${c.color_bg};color:${c.color_text}">${esc(c.name)}</span></td>
+      <td><button class="btn-sm btn-del" onclick="deleteCategory(${c.id})">Delete</button></td>
+    </tr>`).join('') || '<tr><td colspan="3" style="color:var(--muted)">No categories yet</td></tr>';
+}
+
+async function addCategory() {
+  const name = document.getElementById('cat-name').value.trim();
+  if (!name) return;
+  const res = await api('POST', '/api/admin/categories', {
+    name,
+    color_bg:   document.getElementById('cat-bg').value,
+    color_text: document.getElementById('cat-text').value
+  });
+  if (res.ok) { document.getElementById('cat-name').value = ''; toast('Category added!'); loadCategories(); }
+  else { const d = await res.json(); toast('Error: ' + d.error); }
+}
+
+async function deleteCategory(id) {
+  if (!confirm('Delete this category?')) return;
+  await api('DELETE', '/api/admin/categories/' + id);
+  toast('Category deleted.'); loadCategories();
+}
+
+// ── Tags ──────────────────────────────────────────────────────────────────────
+async function loadTags() {
+  const tags = await fetch('/api/tags').then(r => r.json());
+  document.getElementById('tag-list').innerHTML = tags.map(t =>
+    `<span class="chip">${esc(t.name)}<button onclick="deleteTag(${t.id})" title="Remove">×</button></span>`
+  ).join('') || '<span style="font-size:13px;color:var(--muted)">No tags yet</span>';
+}
+
+async function addTag() {
+  const name = document.getElementById('tag-name').value.trim();
+  if (!name) return;
+  const res = await api('POST', '/api/admin/tags', { name });
+  if (res.ok) { document.getElementById('tag-name').value = ''; toast('Tag added!'); loadTags(); }
+  else { const d = await res.json(); toast('Error: ' + d.error); }
+}
+
+async function deleteTag(id) {
+  await api('DELETE', '/api/admin/tags/' + id);
+  toast('Tag deleted.'); loadTags();
+}
+
+// ── Platforms ─────────────────────────────────────────────────────────────────
+async function loadPlatforms() {
+  const plats = await fetch('/api/platforms').then(r => r.json());
+  document.getElementById('plat-list').innerHTML = plats.map(p =>
+    `<span class="chip">${esc(p.name)}<button onclick="deletePlatform(${p.id})" title="Remove">×</button></span>`
+  ).join('') || '<span style="font-size:13px;color:var(--muted)">No platforms yet</span>';
+}
+
+async function addPlatform() {
+  const name = document.getElementById('plat-name').value.trim();
+  if (!name) return;
+  const res = await api('POST', '/api/admin/platforms', { name });
+  if (res.ok) { document.getElementById('plat-name').value = ''; toast('Platform added!'); loadPlatforms(); }
+  else { const d = await res.json(); toast('Error: ' + d.error); }
+}
+
+async function deletePlatform(id) {
+  await api('DELETE', '/api/admin/platforms/' + id);
+  toast('Platform deleted.'); loadPlatforms();
+}
+
+// ── Statuses ──────────────────────────────────────────────────────────────────
+async function loadStatuses() {
+  const stats = await fetch('/api/statuses').then(r => r.json());
+  document.getElementById('stat-list').innerHTML = stats.map(s => `
+    <tr>
+      <td>${esc(s.name)}</td>
+      <td><span class="badge-prev" style="background:${s.color_bg};color:${s.color_text}">${esc(s.name)}</span></td>
+      <td><button class="btn-sm btn-del" onclick="deleteStatus(${s.id})">Delete</button></td>
+    </tr>`).join('') || '<tr><td colspan="3" style="color:var(--muted)">No statuses yet</td></tr>';
+}
+
+async function addStatus() {
+  const name = document.getElementById('stat-name').value.trim();
+  if (!name) return;
+  const res = await api('POST', '/api/admin/statuses', {
+    name,
+    color_bg:   document.getElementById('stat-bg').value,
+    color_text: document.getElementById('stat-text').value
+  });
+  if (res.ok) { document.getElementById('stat-name').value = ''; toast('Status added!'); loadStatuses(); }
+  else { const d = await res.json(); toast('Error: ' + d.error); }
+}
+
+async function deleteStatus(id) {
+  if (!confirm('Delete this status?')) return;
+  await api('DELETE', '/api/admin/statuses/' + id);
+  toast('Status deleted.'); loadStatuses();
+}
+
+// ── Announcements ─────────────────────────────────────────────────────────────
+async function loadAnnouncements() {
+  const anns = await api('GET', '/api/admin/announcements').then(r => r.json());
+  const el = document.getElementById('ann-list');
+  if (!anns.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px">No announcements yet.</p>'; return; }
+  el.innerHTML = anns.map(a => `
+    <div style="padding:12px 0;border-bottom:0.5px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <span style="font-size:14px;font-weight:600">${esc(a.title)}</span>
+        <span class="ann-active ${a.active ? 'ann-on' : 'ann-off'}">${a.active ? 'Active' : 'Hidden'}</span>
+        <button class="btn-sm" onclick="toggleAnn(${a.id}, ${a.active})">${a.active ? 'Hide' : 'Show'}</button>
+        <button class="btn-sm btn-del" onclick="deleteAnn(${a.id})">Delete</button>
+      </div>
+      ${a.body ? `<div class="ann-body">${esc(a.body)}</div>` : ''}
+      <div style="font-size:11px;color:var(--hint);margin-top:6px">${fmt(a.created_at)}</div>
+    </div>`).join('');
+}
+
+async function addAnnouncement() {
+  const title = document.getElementById('ann-title').value.trim();
+  if (!title) return;
+  const res = await api('POST', '/api/admin/announcements', {
+    title,
+    body:   document.getElementById('ann-body').value,
+    active: document.getElementById('ann-active').checked
+  });
+  if (res.ok) {
+    document.getElementById('ann-title').value = '';
+    document.getElementById('ann-body').value = '';
+    document.getElementById('ann-active').checked = true;
+    toast('Announcement posted!'); loadAnnouncements();
+  }
+}
+
+async function toggleAnn(id, current) {
+  await api('PUT', '/api/admin/announcements/' + id, { active: !current });
+  toast('Updated.'); loadAnnouncements();
+}
+
+async function deleteAnn(id) {
+  if (!confirm('Delete this announcement?')) return;
+  await api('DELETE', '/api/admin/announcements/' + id);
+  toast('Deleted.'); loadAnnouncements();
+}
+
+// ── Superusers ────────────────────────────────────────────────────────────────
+async function loadSuperusers() {
+  const users = await fetch('/api/admin/superusers').then(r => r.json());
+  document.getElementById('su-list').innerHTML = users.map(u => `
+    <tr>
+      <td>${esc(u.username)}</td>
+      <td>${fmt(u.created_at)}</td>
+      <td><button class="btn-sm btn-del" onclick="deleteSuperuser(${u.id})">Delete</button></td>
+    </tr>`).join('');
+}
+
+async function addSuperuser() {
+  const username = document.getElementById('su-username').value.trim();
+  const password = document.getElementById('su-password').value;
+  if (!username || !password) { toast('Username and password required'); return; }
+  const res = await api('POST', '/api/admin/superusers', { username, password });
+  if (res.ok) {
+    document.getElementById('su-username').value = '';
+    document.getElementById('su-password').value = '';
+    toast('Superuser added!'); loadSuperusers();
+  } else { const d = await res.json(); toast('Error: ' + d.error); }
+}
+
+async function deleteSuperuser(id) {
+  if (!confirm('Delete this superuser?')) return;
+  const res = await api('DELETE', '/api/admin/superusers/' + id);
+  if (res.ok) { toast('Deleted.'); loadSuperusers(); }
+  else { const d = await res.json(); toast('Error: ' + d.error); }
+}
+
+
+// ── Requests ──────────────────────────────────────────────────────────────────
+let currentReqFilter = '';
+
+async function loadRequests() {
+  const url = '/api/admin/requests' + (currentReqFilter ? '?status=' + currentReqFilter : '');
+  const reqs = await fetch(url).then(r => r.json());
+  const el = document.getElementById('req-admin-list');
+  if (!reqs.length) { el.innerHTML = '<div class="section" style="color:var(--muted);font-size:13px;text-align:center;padding:2rem">No requests found.</div>'; return; }
+  el.innerHTML = reqs.map(r => `
+    <div class="req-card-admin">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:600;margin-bottom:6px">${esc(r.game_title)}</div>
+          ${r.description ? `<div style="font-size:13px;color:var(--muted);margin-bottom:6px;line-height:1.5">${esc(r.description)}</div>` : ''}
+          ${r.reason ? `<div style="font-size:12px;color:var(--hint);margin-bottom:8px">Reason: ${esc(r.reason)}</div>` : ''}
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span class="req-status req-status-${r.status}">${r.status.charAt(0).toUpperCase()+r.status.slice(1)}</span>
+            <span style="font-size:11px;color:var(--hint)">${fmt(r.created_at)}</span>
+          </div>
+          ${r.admin_note ? `<div style="font-size:12px;margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-md)">📝 ${esc(r.admin_note)}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;min-width:140px">
+          <select onchange="updateReqStatus(${r.id}, this.value, document.getElementById('note-${r.id}').value)" style="padding:6px 10px;border:0.5px solid var(--border2);border-radius:var(--radius-md);font-size:12px;background:var(--surface);color:var(--text)">
+            <option value="pending"  ${r.status==='pending'  ?'selected':''}>Pending</option>
+            <option value="approved" ${r.status==='approved' ?'selected':''}>Approved</option>
+            <option value="done"     ${r.status==='done'     ?'selected':''}>Done</option>
+            <option value="rejected" ${r.status==='rejected' ?'selected':''}>Rejected</option>
+          </select>
+          <input id="note-${r.id}" placeholder="Admin note…" value="${esc(r.admin_note)}" style="padding:6px 10px;border:0.5px solid var(--border2);border-radius:var(--radius-md);font-size:12px;background:var(--surface);color:var(--text)">
+          <button class="btn-sm" onclick="updateReqStatus(${r.id}, document.querySelector('#req-admin-list select:nth-of-type(1)').value, document.getElementById('note-${r.id}').value)" style="font-size:11px" onclick="saveReqNote(${r.id})">Save note</button>
+          <button class="btn-sm btn-del" onclick="deleteReq(${r.id})">Delete</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function updateReqStatus(id, status, admin_note) {
+  await fetch('/api/admin/requests/' + id, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ status, admin_note })
+  });
+  toast('Request updated!');
+  loadRequests();
+}
+
+async function deleteReq(id) {
+  if (!confirm('Delete this request?')) return;
+  await fetch('/api/admin/requests/' + id, { method: 'DELETE' });
+  toast('Deleted.'); loadRequests();
+}
+
+function filterRequests(status) {
+  currentReqFilter = status;
+  document.querySelectorAll('.req-filter').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  loadRequests();
+}
+
+// ── Loader map ────────────────────────────────────────────────────────────────
+const loaders = {
+  dashboard:     loadDashboard,
+  categories:    loadCategories,
+  tags:          loadTags,
+  platforms:     loadPlatforms,
+  statuses:      loadStatuses,
+  announcements: loadAnnouncements,
+  superusers:    loadSuperusers,
+  requests:      loadRequests,
+};
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+// Enter key shortcuts
+['cat-name','tag-name','plat-name','stat-name'].forEach((id, i) => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') [addCategory, addTag, addPlatform, addStatus][i](); });
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadMe();
+loadDashboard();
+</script>
+</body>
+</html>

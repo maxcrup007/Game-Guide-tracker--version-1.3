@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f3ef; --surface: #ffffff; --surface2: #f0eeea;
+    --border: rgba(0,0,0,0.10); --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18; --muted: #6b6b66; --hint: #9e9e98;
+    --accent: #1a1a18; --accent-fg: #ffffff;
+    --danger: #c0392b; --radius-md: 8px; --radius-lg: 12px;
+  }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 2.5rem 2rem; width: 360px; max-width: 95vw; }
+  .logo { text-align: center; margin-bottom: 2rem; }
+  .logo-icon { font-size: 32px; margin-bottom: 8px; }
+  .logo h1 { font-size: 18px; font-weight: 600; }
+  .logo p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .field input { width: 100%; padding: 9px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius-md); background: var(--surface); color: var(--text); font-size: 13px; font-family: inherit; outline: none; }
+  .field input:focus { border-color: var(--text); }
+  .btn { width: 100%; background: var(--accent); color: var(--accent-fg); border: none; border-radius: var(--radius-md); padding: 10px; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 6px; transition: opacity .15s; }
+  .btn:hover { opacity: 0.85; }
+  .error { font-size: 12px; color: var(--danger); margin-top: 10px; text-align: center; min-height: 18px; }
+  .back { text-align: center; margin-top: 1.25rem; font-size: 12px; color: var(--muted); }
+  .back a { color: var(--text); text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🔐</div>
+    <h1>Admin Panel</h1>
+    <p>Games & Hobbies Tracker</p>
+  </div>
+  <div class="field">
+    <label>Username</label>
+    <input type="text" id="username" placeholder="admin" autocomplete="username">
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+  </div>
+  <button class="btn" onclick="login()">Sign in</button>
+  <div class="error" id="err"></div>
+  <div class="back"><a href="/">← Back to app</a></div>
+</div>
+
+<script>
+document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+
+async function login() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  document.getElementById('err').textContent = '';
+  if (!username || !password) { document.getElementById('err').textContent = 'Please enter username and password.'; return; }
+  const res = await fetch('/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+  if (res.ok) {
+    window.location.href = '/admin';
+  } else {
+    const data = await res.json();
+    document.getElementById('err').textContent = data.error || 'Login failed.';
+  }
+}
+</script>
+</body>
+</html>
