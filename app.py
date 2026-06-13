@@ -18,6 +18,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+
 def api_admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -26,20 +27,40 @@ def api_admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+
 # ── Serve frontend ────────────────────────────────────────────────────────────
+
 
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
+
+
+@app.route('/request')
+def request_page():
+    return send_from_directory('static', 'request.html')
+
+
+@app.route('/contact')
+def contact_page():
+    return send_from_directory('static', 'contact.html')
+
+
+@app.route('/shared.css')
+def shared_css():
+    return send_from_directory('static', 'shared.css')
+
 
 @app.route('/admin')
 @admin_required
 def admin_index():
     return send_from_directory('static', 'admin.html')
 
+
 @app.route('/admin/login', methods=['GET'])
 def admin_login_page():
     return send_from_directory('static', 'admin_login.html')
+
 
 @app.route('/admin/login', methods=['POST'])
 def admin_login():
@@ -55,10 +76,12 @@ def admin_login():
         return jsonify({'success': True})
     return jsonify({'error': 'Invalid username or password'}), 401
 
+
 @app.route('/admin/logout', methods=['POST'])
 def admin_logout():
     session.clear()
     return jsonify({'success': True})
+
 
 # ── Public API — Items ────────────────────────────────────────────────────────
 
@@ -401,7 +424,6 @@ def admin_update_request(rid):
     )
     db.commit()
     return jsonify({'success': True})
-
 
 @app.route('/api/admin/requests/<int:rid>', methods=['DELETE'])
 @api_admin_required
