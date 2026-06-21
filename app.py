@@ -1,10 +1,23 @@
-from flask import Flask, jsonify, request, send_from_directory, session, redirect, url_for, render_template_string
+from flask import Flask, jsonify, request, send_from_directory, session, redirect, url_for
+from flask_cors import CORS
 from database import init_db, get_db, hash_password
 from functools import wraps
+from werkzeug.utils import secure_filename
 import os
+import uuid
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+FRONTEND_DIST = os.path.join(BASE_DIR, 'frontend', 'dist')
+ALLOWED_IMAGE_EXT = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+ALLOWED_FILE_EXT = {'md', 'markdown', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'txt', 'doc', 'docx'}
+
+os.makedirs(os.path.join(UPLOAD_FOLDER, 'images'), exist_ok=True)
+os.makedirs(os.path.join(UPLOAD_FOLDER, 'files'), exist_ok=True)
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key-in-production')
+CORS(app)
 
 init_db()
 
@@ -28,38 +41,11 @@ def api_admin_required(f):
     return decorated
 
 
-# ── Serve frontend ────────────────────────────────────────────────────────────
-
-
-@app.route('/')
-def index():
-    return send_from_directory('static', 'index.html')
-
-
-@app.route('/request')
-def request_page():
-    return send_from_directory('static', 'request.html')
-
-
-@app.route('/contact')
-def contact_page():
-    return send_from_directory('static', 'contact.html')
-
+# ── Serve legacy frontend (fallback when React build not present) ─────────────
 
 @app.route('/shared.css')
 def shared_css():
     return send_from_directory('static', 'shared.css')
-
-
-@app.route('/admin')
-@admin_required
-def admin_index():
-    return send_from_directory('static', 'admin.html')
-
-
-@app.route('/admin/login', methods=['GET'])
-def admin_login_page():
-    return send_from_directory('static', 'admin_login.html')
 
 
 @app.route('/admin/login', methods=['POST'])
@@ -120,8 +106,9 @@ def create_item():
         return jsonify({'error': 'Title is required'}), 400
     db = get_db()
     db.execute(
-        "INSERT INTO items (title, category, notes, favorite) VALUES (?,?,?,?)",
-        [data['title'], data.get('category',''), data.get('notes',''), int(data.get('favorite', False))]
+        "INSERT INTO items (title, category, notes, favorite, status, image_url) VALUES (?,?,?,?,?,?)",
+        [data['title'], data.get('category',''), data.get('notes',''),
+         int(data.get('favorite', False)), data.get('status',''), data.get('image_url','')]
     )
     db.commit()
     row = db.execute("SELECT * FROM items ORDER BY id DESC LIMIT 1").fetchone()
@@ -143,11 +130,13 @@ def update_item(item_id):
         return jsonify({'error': 'Not found'}), 404
     data = request.get_json()
     db.execute(
-        "UPDATE items SET title=?, category=?, notes=?, favorite=? WHERE id=?",
+        "UPDATE items SET title=?, category=?, notes=?, favorite=?, status=?, image_url=?, updated_at=date('now') WHERE id=?",
         [data.get('title', row['title']),
          data.get('category', row['category']),
          data.get('notes', row['notes']),
          int(data.get('favorite', row['favorite'])),
+         data.get('status', row['status'] if 'status' in row.keys() else ''),
+         data.get('image_url', row['image_url'] if 'image_url' in row.keys() else ''),
          item_id]
     )
     db.commit()
@@ -432,6 +421,136 @@ def admin_delete_request(rid):
     db.execute("DELETE FROM requests WHERE id=?", [rid])
     db.commit()
     return jsonify({'success': True})
+
+# ── File Upload — Item Images ────────────────────────────────────────────────
+
+@app.route('/api/items/<int:item_id>/image', methods=['POST'])
+def upload_item_image(item_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM items WHERE id=?", [item_id]).fetchone()
+    if not row:
+        return jsonify({'error': 'Not found'}), 404
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file'}), 400
+    f = request.files['image']
+    if not f.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    ext = f.filename.rsplit('.', 1)[-1].lower()
+    if ext not in ALLOWED_IMAGE_EXT:
+        return jsonify({'error': 'Invalid image type'}), 400
+    filename = f"images/{uuid.uuid4().hex}.{ext}"
+    f.save(os.path.join(UPLOAD_FOLDER, filename))
+    # Remove old image
+    old_url = row['image_url'] if 'image_url' in row.keys() else ''
+    if old_url:
+        old_path = os.path.join(UPLOAD_FOLDER, old_url)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+    db.execute("UPDATE items SET image_url=?, updated_at=date('now') WHERE id=?", [filename, item_id])
+    db.commit()
+    return jsonify({'image_url': filename})
+
+
+@app.route('/api/items/<int:item_id>/image', methods=['DELETE'])
+def delete_item_image(item_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM items WHERE id=?", [item_id]).fetchone()
+    if not row:
+        return jsonify({'error': 'Not found'}), 404
+    old_url = row['image_url'] if 'image_url' in row.keys() else ''
+    if old_url:
+        old_path = os.path.join(UPLOAD_FOLDER, old_url)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+    db.execute("UPDATE items SET image_url='', updated_at=date('now') WHERE id=?", [item_id])
+    db.commit()
+    return jsonify({'success': True})
+
+
+# ── File Upload — Item Attachments ───────────────────────────────────────────
+
+@app.route('/api/items/<int:item_id>/files', methods=['GET'])
+def get_item_files(item_id):
+    db = get_db()
+    rows = db.execute("SELECT * FROM item_files WHERE item_id=? ORDER BY created_at DESC", [item_id]).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route('/api/items/<int:item_id>/files', methods=['POST'])
+def upload_item_file(item_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM items WHERE id=?", [item_id]).fetchone()
+    if not row:
+        return jsonify({'error': 'Not found'}), 404
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file'}), 400
+    f = request.files['file']
+    if not f.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    ext = f.filename.rsplit('.', 1)[-1].lower()
+    if ext not in ALLOWED_FILE_EXT:
+        return jsonify({'error': 'File type not allowed'}), 400
+    original_name = secure_filename(f.filename)
+    filename = f"files/{uuid.uuid4().hex}.{ext}"
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    f.save(filepath)
+    file_size = os.path.getsize(filepath)
+    file_type = 'image' if ext in ALLOWED_IMAGE_EXT else ext
+    db.execute(
+        "INSERT INTO item_files (item_id, filename, original_name, file_type, file_size) VALUES (?,?,?,?,?)",
+        [item_id, filename, original_name, file_type, file_size]
+    )
+    db.commit()
+    return jsonify({'success': True}), 201
+
+
+@app.route('/api/items/<int:item_id>/files/<int:file_id>', methods=['DELETE'])
+def delete_item_file(item_id, file_id):
+    db = get_db()
+    row = db.execute("SELECT * FROM item_files WHERE id=? AND item_id=?", [file_id, item_id]).fetchone()
+    if not row:
+        return jsonify({'error': 'Not found'}), 404
+    filepath = os.path.join(UPLOAD_FOLDER, row['filename'])
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    db.execute("DELETE FROM item_files WHERE id=?", [file_id])
+    db.commit()
+    return jsonify({'success': True})
+
+
+# ── Stats endpoint ───────────────────────────────────────────────────────────
+
+@app.route('/api/stats')
+def get_stats():
+    db = get_db()
+    total = db.execute("SELECT COUNT(*) as c FROM items").fetchone()['c']
+    favs = db.execute("SELECT COUNT(*) as c FROM items WHERE favorite=1").fetchone()['c']
+    cats = db.execute("SELECT COUNT(DISTINCT category) as c FROM items").fetchone()['c']
+    return jsonify({'total': total, 'favorites': favs, 'categories': cats})
+
+
+# ── Serve uploaded files ─────────────────────────────────────────────────────
+
+@app.route('/uploads/<path:filename>')
+def serve_upload(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+
+# ── Serve React SPA (production) ─────────────────────────────────────────────
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_spa(path):
+    if path.startswith('api/') or path.startswith('admin/') or path.startswith('uploads/'):
+        return jsonify({'error': 'Not found'}), 404
+    filepath = os.path.join(FRONTEND_DIST, path)
+    if path and os.path.exists(filepath):
+        return send_from_directory(FRONTEND_DIST, path)
+    index = os.path.join(FRONTEND_DIST, 'index.html')
+    if os.path.exists(index):
+        return send_from_directory(FRONTEND_DIST, 'index.html')
+    return send_from_directory('static', 'index.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True)

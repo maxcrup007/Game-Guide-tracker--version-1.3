@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Games & Hobbies — Contact Us</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .contact-layout { display:grid; grid-template-columns:1fr 1.6fr; gap:2.5rem; align-items:start; }
+  @media(max-width:700px){ .contact-layout{grid-template-columns:1fr;} }
+
+  /* ── Info cards ── */
+  .info-card {
+    display:flex; align-items:flex-start; gap:14px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-lg); padding:1.25rem 1.5rem;
+    margin-bottom:12px; transition:border-color .15s;
+  }
+  .info-card:hover { border-color:rgba(249,115,22,0.4); }
+  .info-icon { width:40px; height:40px; border-radius:var(--radius-md); background:var(--orange-bg); border:1px solid rgba(249,115,22,0.25); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+  .info-label { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .info-value { font-size:14px; font-weight:500; color:var(--text); }
+  .info-value a { color:var(--orange); text-decoration:none; }
+  .info-value a:hover { text-decoration:underline; }
+  .info-sub { font-size:12px; color:var(--hint); margin-top:3px; }
+
+  /* ── Social row ── */
+  .social-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:1.5rem; }
+  .social-btn {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:9px 16px; border-radius:var(--radius-md);
+    border:1px solid var(--border2); background:var(--surface);
+    color:var(--muted); font-size:13px; font-weight:500;
+    text-decoration:none; transition:all .15s;
+  }
+  .social-btn:hover { background:var(--surface2); color:var(--text); border-color:var(--border2); transform:translateY(-1px); }
+
+  /* ── Form card ── */
+  .form-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-xl);
+    padding:2.5rem;
+  }
+  .form-card .field input,
+  .form-card .field textarea { background:var(--bg2); }
+  .form-card .field input:focus,
+  .form-card .field textarea:focus { border-color:var(--orange); box-shadow:0 0 0 3px var(--orange-glow); }
+
+  .form-success {
+    display:none;
+    text-align:center;
+    padding:3rem 2rem;
+  }
+  .form-success .icon { font-size:52px; margin-bottom:1rem; }
+  .form-success h2 { font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; margin-bottom:8px; }
+  .form-success p  { color:var(--muted); font-size:13px; margin-bottom:1.5rem; }
+
+  /* ── FAQ ── */
+  .faq-item { border-bottom:1px solid var(--border); padding:1rem 0; }
+  .faq-item:last-child { border-bottom:none; }
+  .faq-q { font-size:14px; font-weight:600; margin-bottom:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .faq-q:hover { color:var(--orange); }
+  .faq-a { font-size:13px; color:var(--muted); line-height:1.65; display:none; }
+  .faq-a.open { display:block; }
+  .faq-arrow { font-size:11px; color:var(--hint); transition:transform .2s; flex-shrink:0; }
+  .faq-arrow.open { transform:rotate(180deg); }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="index.html" class="navbar-brand">🎮 Games<span>&amp;</span>Hobbies</a>
+    <div class="navbar-links">
+      <a href="index.html"   class="nav-link">My Collection</a>
+      <a href="request.html" class="nav-link">Request</a>
+      <a href="contact.html" class="nav-link active">Contact</a>
+    </div>
+    <div class="navbar-right">
+      <a href="index.html" class="btn-secondary" style="font-size:12px;padding:7px 14px;text-decoration:none">← Back</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-wrap">
+
+  <div style="margin-bottom:2.5rem">
+    <div class="accent-line"></div>
+    <h1 style="font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;margin-bottom:8px">Contact Us</h1>
+    <p style="color:var(--muted);font-size:14px;max-width:520px">Have a question, suggestion, or want to report something? We'd love to hear from you.</p>
+  </div>
+
+  <div class="contact-layout">
+
+    <!-- Left — Contact info -->
+    <div>
+      <div class="section-title">Get in touch</div>
+
+      <div class="info-card">
+        <div class="info-icon">📧</div>
+        <div>
+          <div class="info-label">Email</div>
+          <div class="info-value"><a href="mailto:hello@gamehobbies.dev">hello@gamehobbies.dev</a></div>
+          <div class="info-sub">We reply within 24 hours</div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-icon">💬</div>
+        <div>
+          <div class="info-label">Discord</div>
+          <div class="info-value"><a href="#" target="_blank">discord.gg/gamehobbies</a></div>
+          <div class="info-sub">Join our community server</div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-icon">🕐</div>
+        <div>
+          <div class="info-label">Support hours</div>
+          <div class="info-value">Mon – Fri, 9:00 – 18:00</div>
+          <div class="info-sub">Thailand time (ICT, UTC+7)</div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-icon">🐛</div>
+        <div>
+          <div class="info-label">Report a bug</div>
+          <div class="info-value"><a href="request.html">Use the request form</a></div>
+          <div class="info-sub">Or email us with details</div>
+        </div>
+      </div>
+
+      <!-- Socials -->
+      <div class="social-row">
+        <a href="#" class="social-btn" target="_blank">𝕏 Twitter</a>
+        <a href="#" class="social-btn" target="_blank">▶ YouTube</a>
+        <a href="#" class="social-btn" target="_blank">📘 Facebook</a>
+      </div>
+
+      <!-- FAQ -->
+      <div style="margin-top:2.5rem">
+        <div class="section-title">FAQ</div>
+        <div id="faq-list">
+          <div class="faq-item">
+            <div class="faq-q" onclick="toggleFaq(0)">
+              <span>How do I request a game to be added?</span>
+              <span class="faq-arrow" id="arr-0">▼</span>
+            </div>
+            <div class="faq-a" id="faq-0">Go to the <a href="request.html" style="color:var(--orange)">Request page</a> and fill out the form with the game title and any details. We'll research and add it soon.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" onclick="toggleFaq(1)">
+              <span>Can I add my own notes to any game?</span>
+              <span class="faq-arrow" id="arr-1">▼</span>
+            </div>
+            <div class="faq-a" id="faq-1">Yes! Click Edit on any card to add your own notes. Notes support full Markdown — headings, lists, images, links, and more.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" onclick="toggleFaq(2)">
+              <span>What is the markdown upload feature?</span>
+              <span class="faq-arrow" id="arr-2">▼</span>
+            </div>
+            <div class="faq-a" id="faq-2">You can upload a <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px">.md</code> file directly to a card using the Upload .md button. The file content replaces the card's notes and is saved to the database.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" onclick="toggleFaq(3)">
+              <span>How do I open notes in StackEdit?</span>
+              <span class="faq-arrow" id="arr-3">▼</span>
+            </div>
+            <div class="faq-a" id="faq-3">Click "Read more →" on any card with notes, then click "Open in StackEdit ↗" in the detail view. Your notes will be pre-loaded into the StackEdit editor.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-q" onclick="toggleFaq(4)">
+              <span>Who can access the admin panel?</span>
+              <span class="faq-arrow" id="arr-4">▼</span>
+            </div>
+            <div class="faq-a" id="faq-4">Only superusers with credentials can access <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:12px">/admin</code>. Admins can manage categories, tags, platforms, statuses, announcements, and review requests.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right — Contact form -->
+    <div>
+      <div class="form-card" id="contact-form-card">
+        <div style="margin-bottom:1.75rem">
+          <div class="section-title">Send a message</div>
+          <p style="font-size:13px;color:var(--muted)">Fill out the form below and we'll get back to you as soon as possible.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="field">
+            <label>Your name *</label>
+            <input id="c-name" placeholder="e.g. Alex">
+          </div>
+          <div class="field">
+            <label>Email *</label>
+            <input id="c-email" type="email" placeholder="you@email.com">
+          </div>
+        </div>
+        <div class="field">
+          <label>Subject</label>
+          <select id="c-subject">
+            <option value="">Select a topic…</option>
+            <option>General question</option>
+            <option>Bug report</option>
+            <option>Feature request</option>
+            <option>Game request</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Message *</label>
+          <textarea id="c-message" style="min-height:140px" placeholder="Tell us what's on your mind…"></textarea>
+        </div>
+        <div id="form-err" style="font-size:12px;color:var(--danger);margin-bottom:12px;display:none"></div>
+        <button class="btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="submitContact()">Send message →</button>
+        <p style="font-size:11px;color:var(--hint);text-align:center;margin-top:12px">We respect your privacy. Your info is never shared.</p>
+      </div>
+
+      <div class="form-success" id="contact-success">
+        <div class="icon">📨</div>
+        <h2>Message sent!</h2>
+        <p>Thanks for reaching out. We'll reply to your email within 24 hours.</p>
+        <button class="btn-primary" onclick="resetContact()">Send another message</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>Games &amp; Hobbies Tracker &nbsp;·&nbsp; <a href="request.html">Request a game</a> &nbsp;·&nbsp; <a href="index.html">My Collection</a></p>
+</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+
+function toggleFaq(i){
+  const a=document.getElementById('faq-'+i);
+  const arr=document.getElementById('arr-'+i);
+  a.classList.toggle('open');
+  arr.classList.toggle('open');
+}
+
+function submitContact(){
+  const name    = document.getElementById('c-name').value.trim();
+  const email   = document.getElementById('c-email').value.trim();
+  const message = document.getElementById('c-message').value.trim();
+  const err     = document.getElementById('form-err');
+  err.style.display='none';
+  if(!name)    { err.textContent='Please enter your name.';    err.style.display='block'; return; }
+  if(!email)   { err.textContent='Please enter your email.';   err.style.display='block'; return; }
+  if(!message) { err.textContent='Please enter a message.';    err.style.display='block'; return; }
+  // Simulate send (no backend mail endpoint — extend with Flask-Mail or similar)
+  setTimeout(()=>{
+    document.getElementById('contact-form-card').style.display='none';
+    document.getElementById('contact-success').style.display='block';
+  }, 400);
+}
+
+function resetContact(){
+  document.getElementById('c-name').value='';
+  document.getElementById('c-email').value='';
+  document.getElementById('c-subject').value='';
+  document.getElementById('c-message').value='';
+  document.getElementById('form-err').style.display='none';
+  document.getElementById('contact-form-card').style.display='block';
+  document.getElementById('contact-success').style.display='none';
+}
+</script>
+</body>
+</html>

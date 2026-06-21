@@ -25,7 +25,27 @@ def init_db():
         category TEXT NOT NULL DEFAULT '',
         notes TEXT DEFAULT '',
         favorite INTEGER DEFAULT 0,
-        created_at TEXT DEFAULT (date('now'))
+        image_url TEXT DEFAULT '',
+        status TEXT DEFAULT '',
+        created_at TEXT DEFAULT (date('now')),
+        updated_at TEXT DEFAULT (date('now'))
+    )''')
+
+    for col, default in [('image_url', "''"), ('status', "''"), ('updated_at', "(date('now'))")]:
+        try:
+            db.execute(f"ALTER TABLE items ADD COLUMN {col} TEXT DEFAULT {default}")
+        except Exception:
+            pass
+
+    db.execute('''CREATE TABLE IF NOT EXISTS item_files (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL,
+        filename TEXT NOT NULL,
+        original_name TEXT NOT NULL,
+        file_type TEXT DEFAULT '',
+        file_size INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
     )''')
 
     db.execute('''CREATE TABLE IF NOT EXISTS superusers (
