@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { get, put, del, uploadFile } from '../api/client';
 import { useTheme } from '../contexts/ThemeContext';
 import toast from 'react-hot-toast';
@@ -107,9 +108,75 @@ export default function ItemDetail() {
         </button>
       </div>
 
-      <article className={`prose max-w-none mb-8 ${isDark ? 'prose-invert' : ''}`}>
+      {/* Content type badge */}
+      {item.content_type && item.content_type !== 'markdown' && (
+        <div className="mb-4">
+          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${
+            item.content_type === 'html' ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
+            : item.content_type === 'json' ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'
+            : 'bg-gray-500/15 text-gray-400 border-gray-500/30'
+          }`}>
+            {item.content_type === 'html' ? '.html' : item.content_type === 'json' ? '.json' : '.txt'}
+          </span>
+        </div>
+      )}
+
+      <article className={`prose prose-lg max-w-none mb-8
+        ${isDark ? 'prose-invert' : ''}
+        prose-headings:font-heading
+        prose-h1:text-2xl prose-h1:font-bold prose-h1:mb-4 prose-h1:mt-8
+        prose-h2:text-xl prose-h2:font-bold prose-h2:mb-3 prose-h2:mt-6 prose-h2:pb-2 ${isDark ? 'prose-h2:border-b prose-h2:border-dark-border' : 'prose-h2:border-b prose-h2:border-light-border'}
+        prose-h3:text-lg prose-h3:font-semibold prose-h3:text-brand prose-h3:mb-2 prose-h3:mt-5
+        prose-p:leading-relaxed prose-p:mb-4
+        prose-a:text-brand prose-a:no-underline hover:prose-a:underline
+        prose-strong:font-semibold ${isDark ? 'prose-strong:text-dark-text' : 'prose-strong:text-light-text'}
+        prose-code:text-brand prose-code:text-sm prose-code:px-2 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:before:content-none prose-code:after:content-none ${isDark ? 'prose-code:bg-dark-surface2 prose-code:border prose-code:border-dark-border2' : 'prose-code:bg-light-surface2 prose-code:border prose-code:border-light-border2'}
+        prose-pre:rounded-xl prose-pre:p-5 prose-pre:overflow-x-auto prose-pre:mb-4 ${isDark ? 'prose-pre:bg-dark-surface2 prose-pre:border prose-pre:border-dark-border' : 'prose-pre:bg-light-surface2 prose-pre:border prose-pre:border-light-border'}
+        prose-blockquote:border-l-3 prose-blockquote:border-brand prose-blockquote:rounded-r-lg prose-blockquote:pl-4 prose-blockquote:py-2 prose-blockquote:not-italic ${isDark ? 'prose-blockquote:bg-brand-bg' : 'prose-blockquote:bg-brand-bg'}
+        prose-img:rounded-xl prose-img:my-4 ${isDark ? 'prose-img:border prose-img:border-dark-border' : 'prose-img:border prose-img:border-light-border'}
+        prose-table:text-sm prose-th:text-left prose-th:font-semibold prose-th:px-4 prose-th:py-2.5 ${isDark ? 'prose-th:bg-dark-surface2 prose-td:border-dark-border prose-th:text-dark-text' : 'prose-th:bg-light-surface2 prose-td:border-light-border prose-th:text-light-text'} prose-td:px-4 prose-td:py-2
+        prose-li:mb-1
+        prose-hr:my-8 ${isDark ? 'prose-hr:border-dark-border' : 'prose-hr:border-light-border'}
+      `}>
         {item.notes ? (
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.notes}</ReactMarkdown>
+          <>
+            {(!item.content_type || item.content_type === 'markdown') && (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeRaw]}
+                components={{
+                  img({ src, alt, ...props }) {
+                    const isValidUrl = src && (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/'));
+                    if (!isValidUrl) return null;
+                    return (
+                      <span className="block my-4">
+                        <img src={src} alt={alt || ''} className="max-w-full rounded-xl object-contain"
+                          style={{ maxHeight: '480px', border: '1px solid rgba(255,255,255,0.07)' }} {...props} />
+                      </span>
+                    );
+                  },
+                  a({ href, children, ...props }) {
+                    return <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline" {...props}>{children}</a>;
+                  },
+                }}
+              >
+                {item.notes}
+              </ReactMarkdown>
+            )}
+            {item.content_type === 'html' && (
+              <div dangerouslySetInnerHTML={{ __html: item.notes }} />
+            )}
+            {item.content_type === 'text' && (
+              <pre className="whitespace-pre-wrap font-sans text-base leading-relaxed">{item.notes}</pre>
+            )}
+            {item.content_type === 'json' && (() => {
+              try {
+                return <pre className="font-mono text-sm leading-relaxed overflow-x-auto">{JSON.stringify(JSON.parse(item.notes), null, 2)}</pre>;
+              } catch {
+                return <pre className="font-mono text-sm text-danger">{item.notes}</pre>;
+              }
+            })()}
+          </>
         ) : (
           <p className="opacity-40 italic">No notes yet.</p>
         )}

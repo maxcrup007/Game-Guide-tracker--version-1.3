@@ -31,7 +31,7 @@ def init_db():
         updated_at TEXT DEFAULT (date('now'))
     )''')
 
-    for col, default in [('image_url', "''"), ('status', "''"), ('updated_at', "(date('now'))")]:
+    for col, default in [('image_url', "''"), ('status', "''"), ('updated_at', "(date('now'))"), ('content_type', "'markdown'")]:
         try:
             db.execute(f"ALTER TABLE items ADD COLUMN {col} TEXT DEFAULT {default}")
         except Exception:

@@ -21,6 +21,22 @@ CORS(app)
 
 init_db()
 
+
+@app.errorhandler(500)
+def handle_500(e):
+    return jsonify({'error': 'Internal server error', 'detail': str(e)}), 500
+
+
+@app.errorhandler(404)
+def handle_404(_):
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Not found'}), 404
+    index = os.path.join(FRONTEND_DIST, 'index.html')
+    if os.path.exists(index):
+        return send_from_directory(FRONTEND_DIST, 'index.html')
+    return jsonify({'error': 'Not found'}), 404
+
+
 # ── Auth helpers ─────────────────────────────────────────────────────────────
 
 def admin_required(f):
@@ -106,9 +122,10 @@ def create_item():
         return jsonify({'error': 'Title is required'}), 400
     db = get_db()
     db.execute(
-        "INSERT INTO items (title, category, notes, favorite, status, image_url) VALUES (?,?,?,?,?,?)",
+        "INSERT INTO items (title, category, notes, favorite, status, image_url, content_type) VALUES (?,?,?,?,?,?,?)",
         [data['title'], data.get('category',''), data.get('notes',''),
-         int(data.get('favorite', False)), data.get('status',''), data.get('image_url','')]
+         int(data.get('favorite', False)), data.get('status',''), data.get('image_url',''),
+         data.get('content_type', 'markdown')]
     )
     db.commit()
     row = db.execute("SELECT * FROM items ORDER BY id DESC LIMIT 1").fetchone()
@@ -129,14 +146,16 @@ def update_item(item_id):
     if not row:
         return jsonify({'error': 'Not found'}), 404
     data = request.get_json()
+    cols = row.keys()
     db.execute(
-        "UPDATE items SET title=?, category=?, notes=?, favorite=?, status=?, image_url=?, updated_at=date('now') WHERE id=?",
+        "UPDATE items SET title=?, category=?, notes=?, favorite=?, status=?, image_url=?, content_type=?, updated_at=date('now') WHERE id=?",
         [data.get('title', row['title']),
          data.get('category', row['category']),
          data.get('notes', row['notes']),
          int(data.get('favorite', row['favorite'])),
-         data.get('status', row['status'] if 'status' in row.keys() else ''),
-         data.get('image_url', row['image_url'] if 'image_url' in row.keys() else ''),
+         data.get('status', row['status'] if 'status' in cols else ''),
+         data.get('image_url', row['image_url'] if 'image_url' in cols else ''),
+         data.get('content_type', row['content_type'] if 'content_type' in cols else 'markdown'),
          item_id]
     )
     db.commit()
@@ -181,6 +200,12 @@ def get_announcements():
 
 # ── Admin API — Categories ────────────────────────────────────────────────────
 
+@app.route('/api/admin/categories', methods=['GET'])
+@api_admin_required
+def admin_get_categories():
+    db = get_db()
+    return jsonify([dict(r) for r in db.execute("SELECT * FROM categories ORDER BY name").fetchall()])
+
 @app.route('/api/admin/categories', methods=['POST'])
 @api_admin_required
 def admin_create_category():
@@ -206,6 +231,12 @@ def admin_delete_category(cid):
 
 # ── Admin API — Tags ──────────────────────────────────────────────────────────
 
+@app.route('/api/admin/tags', methods=['GET'])
+@api_admin_required
+def admin_get_tags():
+    db = get_db()
+    return jsonify([dict(r) for r in db.execute("SELECT * FROM tags ORDER BY name").fetchall()])
+
 @app.route('/api/admin/tags', methods=['POST'])
 @api_admin_required
 def admin_create_tag():
@@ -230,6 +261,12 @@ def admin_delete_tag(tid):
 
 # ── Admin API — Platforms ─────────────────────────────────────────────────────
 
+@app.route('/api/admin/platforms', methods=['GET'])
+@api_admin_required
+def admin_get_platforms():
+    db = get_db()
+    return jsonify([dict(r) for r in db.execute("SELECT * FROM platforms ORDER BY name").fetchall()])
+
 @app.route('/api/admin/platforms', methods=['POST'])
 @api_admin_required
 def admin_create_platform():
@@ -253,6 +290,12 @@ def admin_delete_platform(pid):
     return jsonify({'success': True})
 
 # ── Admin API — Statuses ──────────────────────────────────────────────────────
+
+@app.route('/api/admin/statuses', methods=['GET'])
+@api_admin_required
+def admin_get_statuses():
+    db = get_db()
+    return jsonify([dict(r) for r in db.execute("SELECT * FROM statuses ORDER BY name").fetchall()])
 
 @app.route('/api/admin/statuses', methods=['POST'])
 @api_admin_required
@@ -421,6 +464,41 @@ def admin_delete_request(rid):
     db.execute("DELETE FROM requests WHERE id=?", [rid])
     db.commit()
     return jsonify({'success': True})
+
+# ── General image upload (for embedding in markdown descriptions) ────────────
+
+@app.route('/api/upload-image', methods=['POST'])
+def upload_general_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file'}), 400
+    f = request.files['image']
+    if not f.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    ext = f.filename.rsplit('.', 1)[-1].lower()
+    if ext not in ALLOWED_IMAGE_EXT:
+        return jsonify({'error': 'Invalid image type'}), 400
+    filename = f"images/{uuid.uuid4().hex}.{ext}"
+    f.save(os.path.join(UPLOAD_FOLDER, filename))
+    return jsonify({'url': f'/uploads/{filename}', 'name': f.filename, 'type': 'image'})
+
+
+@app.route('/api/upload-file', methods=['POST'])
+def upload_general_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file'}), 400
+    f = request.files['file']
+    if not f.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    ext = f.filename.rsplit('.', 1)[-1].lower()
+    if ext not in ALLOWED_FILE_EXT:
+        return jsonify({'error': 'File type not allowed'}), 400
+    original_name = secure_filename(f.filename)
+    is_image = ext in ALLOWED_IMAGE_EXT
+    sub = 'images' if is_image else 'files'
+    filename = f"{sub}/{uuid.uuid4().hex}.{ext}"
+    f.save(os.path.join(UPLOAD_FOLDER, filename))
+    return jsonify({'url': f'/uploads/{filename}', 'name': original_name, 'type': 'image' if is_image else 'file'})
+
 
 # ── File Upload — Item Images ────────────────────────────────────────────────
 

@@ -17,7 +17,7 @@ game_hobby_tracker/
     └── index.html    ← Full frontend (HTML + CSS + JS)
 ```
 
----
+--- 
 
 ## Quick Start
 

@@ -20,12 +20,12 @@ export default function Sidebar({ open, onClose, selectedCategory, onSelectCateg
 
   return (
     <>
-      {open && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={onClose} />}
+      {open && <div className="fixed inset-0 bg-black/50 z-30" onClick={onClose} />}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-40 w-60 flex flex-col
+        fixed inset-y-0 left-0 z-40 w-60 flex flex-col top-14
         ${isDark ? 'bg-dark-surface border-dark-border' : 'bg-light-surface border-light-border'}
-        border-r transition-transform lg:translate-x-0 top-14 lg:top-0
-        ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        border-r transition-transform duration-300 ease-in-out
+        ${open ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className={`p-4 border-b ${isDark ? 'border-dark-border' : 'border-light-border'}`}>
           <h3 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${isDark ? 'text-dark-muted' : 'text-light-muted'}`}>Categories</h3>
@@ -77,7 +77,7 @@ export default function Sidebar({ open, onClose, selectedCategory, onSelectCateg
           <div className="md:hidden flex flex-col gap-1 mb-3">
             {[
               { to: '/', label: 'Collection' },
-              { to: '/board', label: 'Board' },
+              { to: '/board', label: 'Board' }, 
               { to: '/request', label: 'Request' },
               { to: '/contact', label: 'Contact' },
             ].map(link => (

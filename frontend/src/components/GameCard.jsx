@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { useTheme } from '../contexts/ThemeContext';
 
 export default function GameCard({ item, onEdit, onDelete, onToggleFav }) {
@@ -59,9 +60,13 @@ export default function GameCard({ item, onEdit, onDelete, onToggleFav }) {
           {item.title}
         </h3>
 
-        <p className={`text-[12.5px] leading-relaxed mb-2 line-clamp-2 ${isDark ? 'text-dark-muted' : 'text-light-muted'}`}>
-          {item.notes || <em className="opacity-40">No notes yet.</em>}
-        </p>
+        <div className={`text-[12.5px] leading-relaxed mb-2 line-clamp-2 ${isDark ? 'text-dark-muted' : 'text-light-muted'} prose prose-sm max-w-none ${isDark ? 'prose-invert' : ''} prose-p:m-0 prose-headings:m-0 prose-headings:text-sm prose-ul:m-0 prose-ol:m-0 prose-li:m-0`}>
+          {item.notes ? (
+            <ReactMarkdown allowedElements={['p', 'strong', 'em', 'code', 'del']} unwrapDisallowed>{item.notes.split('\n').slice(0, 3).join('\n')}</ReactMarkdown>
+          ) : (
+            <em className="opacity-40">No notes yet.</em>
+          )}
+        </div>
 
         {item.notes && (
           <button
