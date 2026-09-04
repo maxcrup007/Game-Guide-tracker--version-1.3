@@ -17,6 +17,7 @@ import AdminPlatforms from './pages/admin/AdminPlatforms';
 import AdminStatuses from './pages/admin/AdminStatuses';
 import AdminAnnouncements from './pages/admin/AdminAnnouncements';
 import AdminRequests from './pages/admin/AdminRequests';
+import AdminEditRequests from './pages/admin/AdminEditRequests';
 import AdminSuperusers from './pages/admin/AdminSuperusers';
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
               <Route path="statuses" element={<AdminStatuses />} />
               <Route path="announcements" element={<AdminAnnouncements />} />
               <Route path="requests" element={<AdminRequests />} />
+              <Route path="edit-requests" element={<AdminEditRequests />} />
               <Route path="superusers" element={<AdminSuperusers />} />
             </Route>
           </Routes>

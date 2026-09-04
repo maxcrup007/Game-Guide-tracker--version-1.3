@@ -1,0 +1,12 @@
+# Replace tracker.example.com with YOUR real domain.
+# Caddy will automatically obtain and renew an HTTPS certificate for it.
+tracker.example.com {
+    reverse_proxy web:5000
+
+    # Allow larger uploads (item images / attachments)
+    request_body {
+        max_size 25MB
+    }
+
+    encode gzip
+}

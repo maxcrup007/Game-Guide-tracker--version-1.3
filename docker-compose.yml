@@ -1,0 +1,30 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      # CHANGE THIS to a long random string (e.g. `openssl rand -hex 32`)
+      SECRET_KEY: "${SECRET_KEY:?set SECRET_KEY in .env}"
+    volumes:
+      # Persist the SQLite DB and uploaded files across container rebuilds
+      - ./data/tracker.db:/app/tracker.db
+      - ./data/uploads:/app/uploads
+    expose:
+      - "5000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+volumes:
+  caddy_data:
+  caddy_config:

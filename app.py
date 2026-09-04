@@ -116,6 +116,7 @@ def get_items():
     return jsonify([dict(r) for r in rows])
 
 @app.route('/api/items', methods=['POST'])
+@api_admin_required
 def create_item():
     data = request.get_json()
     if not data or not data.get('title'):
@@ -140,6 +141,7 @@ def get_item(item_id):
     return jsonify(dict(row))
 
 @app.route('/api/items/<int:item_id>', methods=['PUT'])
+@api_admin_required
 def update_item(item_id):
     db  = get_db()
     row = db.execute("SELECT * FROM items WHERE id=?", [item_id]).fetchone()
@@ -162,6 +164,7 @@ def update_item(item_id):
     return jsonify(dict(db.execute("SELECT * FROM items WHERE id=?", [item_id]).fetchone()))
 
 @app.route('/api/items/<int:item_id>', methods=['DELETE'])
+@api_admin_required
 def delete_item(item_id):
     db  = get_db()
     row = db.execute("SELECT * FROM items WHERE id=?", [item_id]).fetchone()
@@ -403,6 +406,75 @@ def admin_delete_superuser(uid):
 @api_admin_required
 def admin_me():
     return jsonify({'username': session.get('admin_username')})
+
+
+# ── Public API — Recommended items ───────────────────────────────────────────
+
+@app.route('/api/items/recommended')
+def get_recommended():
+    db = get_db()
+    rows = db.execute(
+        "SELECT * FROM items ORDER BY favorite DESC, updated_at DESC, created_at DESC LIMIT 6"
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+# ── Public API — Edit Requests (user submits) ─────────────────────────────────
+
+@app.route('/api/edit-requests', methods=['POST'])
+def create_edit_request():
+    data = request.get_json()
+    if not data or not data.get('item_id'):
+        return jsonify({'error': 'item_id is required'}), 400
+    db = get_db()
+    db.execute(
+        "INSERT INTO edit_requests (item_id, requester_name, reason, proposed_changes) VALUES (?,?,?,?)",
+        [data['item_id'], data.get('requester_name', ''), data.get('reason', ''), data.get('proposed_changes', '')]
+    )
+    db.commit()
+    return jsonify({'success': True, 'message': 'Edit request submitted!'}), 201
+
+
+# ── Admin API — Edit Requests ─────────────────────────────────────────────────
+
+@app.route('/api/admin/edit-requests', methods=['GET'])
+@api_admin_required
+def admin_get_edit_requests():
+    db = get_db()
+    status = request.args.get('status', '')
+    query = '''SELECT er.*, i.title as item_title FROM edit_requests er
+               LEFT JOIN items i ON er.item_id = i.id'''
+    params = []
+    if status:
+        query += " WHERE er.status = ?"
+        params.append(status)
+    query += " ORDER BY er.created_at DESC"
+    return jsonify([dict(r) for r in db.execute(query, params).fetchall()])
+
+
+@app.route('/api/admin/edit-requests/<int:rid>', methods=['PUT'])
+@api_admin_required
+def admin_update_edit_request(rid):
+    data = request.get_json()
+    db = get_db()
+    row = db.execute("SELECT * FROM edit_requests WHERE id=?", [rid]).fetchone()
+    if not row:
+        return jsonify({'error': 'Not found'}), 404
+    db.execute(
+        "UPDATE edit_requests SET status=?, admin_note=? WHERE id=?",
+        [data.get('status', row['status']), data.get('admin_note', row['admin_note']), rid]
+    )
+    db.commit()
+    return jsonify({'success': True})
+
+
+@app.route('/api/admin/edit-requests/<int:rid>', methods=['DELETE'])
+@api_admin_required
+def admin_delete_edit_request(rid):
+    db = get_db()
+    db.execute("DELETE FROM edit_requests WHERE id=?", [rid])
+    db.commit()
+    return jsonify({'success': True})
 
 
 # ── Public API — Requests ─────────────────────────────────────────────────────

@@ -101,6 +101,18 @@ def init_db():
         created_at TEXT DEFAULT (datetime('now'))
     )''')
 
+    db.execute('''CREATE TABLE IF NOT EXISTS edit_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL,
+        requester_name TEXT DEFAULT '',
+        reason TEXT DEFAULT '',
+        proposed_changes TEXT DEFAULT '',
+        status TEXT DEFAULT 'pending',
+        admin_note TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+    )''')
+
     db.commit()
 
     # Seed superuser

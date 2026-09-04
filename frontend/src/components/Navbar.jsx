@@ -1,9 +1,11 @@
 import { NavLink } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from './ThemeToggle';
 
 export default function Navbar({ onToggleSidebar }) {
   const { theme } = useTheme();
+  const { isAdmin, adminUsername } = useAuth();
   const isDark = theme === 'dark';
 
   return (
@@ -54,6 +56,13 @@ export default function Navbar({ onToggleSidebar }) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        {isAdmin && (
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand/15 border border-brand/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+            <span className="text-xs font-semibold text-brand">{adminUsername}</span>
+            <span className="text-[10px] text-brand/60 font-bold tracking-wide">ADMIN</span>
+          </div>
+        )}
         <ThemeToggle />
       </div>
     </nav>

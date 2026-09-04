@@ -11,6 +11,7 @@ const adminLinks = [
   { to: '/admin/statuses', label: 'Statuses', icon: '📋' },
   { to: '/admin/announcements', label: 'Announcements', icon: '📢' },
   { to: '/admin/requests', label: 'Requests', icon: '📨' },
+  { to: '/admin/edit-requests', label: 'Edit Requests', icon: '✏️' },
   { to: '/admin/superusers', label: 'Superusers', icon: '👤' },
 ];
 
