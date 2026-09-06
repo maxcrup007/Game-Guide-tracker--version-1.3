@@ -1,8 +1,11 @@
 import sqlite3
 import hashlib
+import os
 from flask import g
 
-DATABASE = 'tracker.db'
+# Path to the SQLite file. Override with the DATABASE_PATH env var in production
+# so the DB lives on a persistent disk (e.g. /var/data/tracker.db on Render).
+DATABASE = os.environ.get('DATABASE_PATH', 'tracker.db')
 
 
 def get_db():
