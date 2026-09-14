@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request, send_from_directory, session, redirect, url_for
 from flask_cors import CORS
-from database import init_db, get_db, hash_password
+from database import init_db, get_db, hash_password, close_db
 from functools import wraps
 from werkzeug.utils import secure_filename
 import os
@@ -20,6 +20,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key-in-product
 CORS(app)
 
 init_db()
+app.teardown_appcontext(close_db)
 
 
 @app.errorhandler(500)
@@ -150,7 +151,7 @@ def update_item(item_id):
     data = request.get_json()
     cols = row.keys()
     db.execute(
-        "UPDATE items SET title=?, category=?, notes=?, favorite=?, status=?, image_url=?, content_type=?, updated_at=date('now') WHERE id=?",
+        "UPDATE items SET title=?, category=?, notes=?, favorite=?, status=?, image_url=?, content_type=?, updated_at=CURRENT_DATE WHERE id=?",
         [data.get('title', row['title']),
          data.get('category', row['category']),
          data.get('notes', row['notes']),
@@ -596,7 +597,7 @@ def upload_item_image(item_id):
         old_path = os.path.join(UPLOAD_FOLDER, old_url)
         if os.path.exists(old_path):
             os.remove(old_path)
-    db.execute("UPDATE items SET image_url=?, updated_at=date('now') WHERE id=?", [filename, item_id])
+    db.execute("UPDATE items SET image_url=?, updated_at=CURRENT_DATE WHERE id=?", [filename, item_id])
     db.commit()
     return jsonify({'image_url': filename})
 
@@ -612,7 +613,7 @@ def delete_item_image(item_id):
         old_path = os.path.join(UPLOAD_FOLDER, old_url)
         if os.path.exists(old_path):
             os.remove(old_path)
-    db.execute("UPDATE items SET image_url='', updated_at=date('now') WHERE id=?", [item_id])
+    db.execute("UPDATE items SET image_url='', updated_at=CURRENT_DATE WHERE id=?", [item_id])
     db.commit()
     return jsonify({'success': True})
 
