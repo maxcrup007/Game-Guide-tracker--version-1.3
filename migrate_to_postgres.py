@@ -13,6 +13,7 @@ SQLite source, so the result matches your local data (ids and all).
 import os
 import sys
 import sqlite3
+import mimetypes
 
 # Target must be Postgres — DATABASE_URL has to be set before importing database.
 if not os.environ.get('DATABASE_URL', '').startswith('postgres'):
@@ -74,6 +75,22 @@ def main():
             )
             dst.commit()
         print(f"  - {t}: {len(rows)} rows")
+
+    # 3. Copy local uploaded files (uploads/) into the media table so images
+    #    on migrated items keep working on the server.
+    uploads_dir = os.path.join(os.path.dirname(os.path.abspath(SOURCE)) or '.', 'uploads')
+    count = 0
+    if os.path.isdir(uploads_dir):
+        for root, _dirs, files in os.walk(uploads_dir):
+            for fn in files:
+                full = os.path.join(root, fn)
+                rel = os.path.relpath(full, uploads_dir).replace('\\', '/')
+                with open(full, 'rb') as fh:
+                    data = fh.read()
+                ctype = mimetypes.guess_type(fn)[0] or 'application/octet-stream'
+                database.save_media(dst, rel, data, ctype)
+                count += 1
+    print(f"  - media files: {count} copied from {uploads_dir}")
 
     src.close()
     dst.close()

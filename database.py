@@ -77,6 +77,41 @@ def close_db(_e=None):
         db.close()
 
 
+# ── Media storage (files kept in the DB so they survive redeploys) ─────────────
+
+def save_media(db, filename, data, content_type):
+    """Insert or replace a stored file's bytes, keyed by its relative filename."""
+    if USE_POSTGRES:
+        db.execute(
+            "INSERT INTO media (filename, data, content_type) VALUES (?,?,?) "
+            "ON CONFLICT (filename) DO UPDATE SET data=EXCLUDED.data, "
+            "content_type=EXCLUDED.content_type",
+            [filename, psycopg2.Binary(data), content_type],
+        )
+    else:
+        db.execute(
+            "INSERT OR REPLACE INTO media (filename, data, content_type) VALUES (?,?,?)",
+            [filename, sqlite3.Binary(data), content_type],
+        )
+    db.commit()
+
+
+def load_media(db, filename):
+    """Return (bytes, content_type) for a stored file, or None if absent."""
+    row = db.execute("SELECT data, content_type FROM media WHERE filename=?", [filename]).fetchone()
+    if not row or row['data'] is None:
+        return None
+    data = row['data']
+    if not isinstance(data, (bytes, bytearray)):
+        data = bytes(data)  # psycopg2 returns memoryview for BYTEA
+    return bytes(data), row['content_type']
+
+
+def delete_media(db, filename):
+    db.execute("DELETE FROM media WHERE filename=?", [filename])
+    db.commit()
+
+
 # ── Schema ─────────────────────────────────────────────────────────────────────
 
 def init_db():
@@ -86,11 +121,13 @@ def init_db():
         id_col = "id SERIAL PRIMARY KEY"
         date_default = "CURRENT_DATE::text"        # 'YYYY-MM-DD'
         ts_default = "CURRENT_TIMESTAMP::text"     # 'YYYY-MM-DD HH:MM:SS...'
+        blob_type = "BYTEA"
         insert_ignore = "INSERT INTO {t} ({c}) VALUES ({p}) ON CONFLICT DO NOTHING"
     else:
         id_col = "id INTEGER PRIMARY KEY AUTOINCREMENT"
         date_default = "date('now')"
         ts_default = "datetime('now')"
+        blob_type = "BLOB"
         insert_ignore = "INSERT OR IGNORE INTO {t} ({c}) VALUES ({p})"
 
     db.execute(f'''CREATE TABLE IF NOT EXISTS items (
@@ -194,6 +231,13 @@ def init_db():
         proposed_changes TEXT DEFAULT '',
         status TEXT DEFAULT 'pending',
         admin_note TEXT DEFAULT '',
+        created_at TEXT DEFAULT ({ts_default})
+    )''')
+
+    db.execute(f'''CREATE TABLE IF NOT EXISTS media (
+        filename TEXT PRIMARY KEY,
+        data {blob_type} NOT NULL,
+        content_type TEXT DEFAULT 'application/octet-stream',
         created_at TEXT DEFAULT ({ts_default})
     )''')
 

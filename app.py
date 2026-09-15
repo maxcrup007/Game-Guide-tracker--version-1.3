@@ -1,6 +1,6 @@
-from flask import Flask, jsonify, request, send_from_directory, session, redirect, url_for
+from flask import Flask, jsonify, request, send_from_directory, session, redirect, url_for, Response
 from flask_cors import CORS
-from database import init_db, get_db, hash_password, close_db
+from database import init_db, get_db, hash_password, close_db, save_media, load_media, delete_media
 from functools import wraps
 from werkzeug.utils import secure_filename
 import os
@@ -14,6 +14,19 @@ ALLOWED_FILE_EXT = {'md', 'markdown', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'
 
 os.makedirs(os.path.join(UPLOAD_FOLDER, 'images'), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_FOLDER, 'files'), exist_ok=True)
+
+
+def _store_upload(filename, f):
+    """Persist an uploaded file into the DB (survives redeploys) and, best-effort,
+    to local disk for dev. Returns the byte size."""
+    data = f.read()
+    save_media(get_db(), filename, data, f.mimetype or 'application/octet-stream')
+    try:
+        with open(os.path.join(UPLOAD_FOLDER, filename), 'wb') as out:
+            out.write(data)
+    except Exception:
+        pass
+    return len(data)
 
 app = Flask(__name__, static_folder='static')
 app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key-in-production')
@@ -551,7 +564,7 @@ def upload_general_image():
     if ext not in ALLOWED_IMAGE_EXT:
         return jsonify({'error': 'Invalid image type'}), 400
     filename = f"images/{uuid.uuid4().hex}.{ext}"
-    f.save(os.path.join(UPLOAD_FOLDER, filename))
+    _store_upload(filename, f)
     return jsonify({'url': f'/uploads/{filename}', 'name': f.filename, 'type': 'image'})
 
 
@@ -569,7 +582,7 @@ def upload_general_file():
     is_image = ext in ALLOWED_IMAGE_EXT
     sub = 'images' if is_image else 'files'
     filename = f"{sub}/{uuid.uuid4().hex}.{ext}"
-    f.save(os.path.join(UPLOAD_FOLDER, filename))
+    _store_upload(filename, f)
     return jsonify({'url': f'/uploads/{filename}', 'name': original_name, 'type': 'image' if is_image else 'file'})
 
 
@@ -590,10 +603,11 @@ def upload_item_image(item_id):
     if ext not in ALLOWED_IMAGE_EXT:
         return jsonify({'error': 'Invalid image type'}), 400
     filename = f"images/{uuid.uuid4().hex}.{ext}"
-    f.save(os.path.join(UPLOAD_FOLDER, filename))
+    _store_upload(filename, f)
     # Remove old image
     old_url = row['image_url'] if 'image_url' in row.keys() else ''
     if old_url:
+        delete_media(db, old_url)
         old_path = os.path.join(UPLOAD_FOLDER, old_url)
         if os.path.exists(old_path):
             os.remove(old_path)
@@ -610,6 +624,7 @@ def delete_item_image(item_id):
         return jsonify({'error': 'Not found'}), 404
     old_url = row['image_url'] if 'image_url' in row.keys() else ''
     if old_url:
+        delete_media(db, old_url)
         old_path = os.path.join(UPLOAD_FOLDER, old_url)
         if os.path.exists(old_path):
             os.remove(old_path)
@@ -643,9 +658,7 @@ def upload_item_file(item_id):
         return jsonify({'error': 'File type not allowed'}), 400
     original_name = secure_filename(f.filename)
     filename = f"files/{uuid.uuid4().hex}.{ext}"
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
-    f.save(filepath)
-    file_size = os.path.getsize(filepath)
+    file_size = _store_upload(filename, f)
     file_type = 'image' if ext in ALLOWED_IMAGE_EXT else ext
     db.execute(
         "INSERT INTO item_files (item_id, filename, original_name, file_type, file_size) VALUES (?,?,?,?,?)",
@@ -661,6 +674,7 @@ def delete_item_file(item_id, file_id):
     row = db.execute("SELECT * FROM item_files WHERE id=? AND item_id=?", [file_id, item_id]).fetchone()
     if not row:
         return jsonify({'error': 'Not found'}), 404
+    delete_media(db, row['filename'])
     filepath = os.path.join(UPLOAD_FOLDER, row['filename'])
     if os.path.exists(filepath):
         os.remove(filepath)
@@ -684,6 +698,10 @@ def get_stats():
 
 @app.route('/uploads/<path:filename>')
 def serve_upload(filename):
+    media = load_media(get_db(), filename)
+    if media is not None:
+        data, content_type = media
+        return Response(data, mimetype=content_type or 'application/octet-stream')
     return send_from_directory(UPLOAD_FOLDER, filename)
 
 
